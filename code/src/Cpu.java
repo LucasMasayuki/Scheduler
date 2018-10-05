@@ -1,2 +1,2 @@
-public class Cpu implements Queue {
+public class Cpu {
 }
