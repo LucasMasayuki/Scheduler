@@ -5,7 +5,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-public class Schedurler {
+public class Escalonador {
     private static int quantum;
     private static int maxFiles = 10;
     private static int maxPriority;
@@ -47,14 +47,16 @@ public class Schedurler {
 
             fileName = "code/src/" + index + ".txt";
             List<String> readTxt = txtHelper.readStringFiles(fileName);
+            String nameOfProcess = readTxt.get(0);
+            readTxt.remove(0);
 
             // Write load file in logfile
-            lines.add("Carregando " +readTxt.get(0));
+            lines.add("Carregando " + nameOfProcess);
 
             // Read file and transform in process object
             Process process = new Process(readTxt);
 
-            Bcp bcp = new Bcp(1, "PRONTO", priority.get(i - 1), priority.get(i - 1), process);
+            Bcp bcp = new Bcp(1, "PRONTO", priority.get(i - 1), process, nameOfProcess, quantum);
 
             // Save process in the memory
             memory.save(process);
@@ -95,20 +97,24 @@ public class Schedurler {
     private static void _initializeQueuesOfCredits() {
         List<Bcp> bcpQueue = readyQueue.getQueue();
         for (Bcp element : bcpQueue) {
-            switch (element.getCredits()) {
+            switch (element.getPriority()) {
                 case 1:
+                    element.setCredits(1);
                     primaryQueue.add(element);
                     break;
 
                 case 2:
+                    element.setCredits(2);
                     secondaryQueue.add(element);
                     break;
 
                 case 3:
+                    element.setCredits(3);
                     thirtyQueue.add(element);
                     break;
 
                 case 4:
+                    element.setCredits(4);
                     fourthQueue.add(element);
                     break;
             }
@@ -117,15 +123,15 @@ public class Schedurler {
 
     private static void _executeProcess(Bcp bcp, List<String> lines, int whatQueue) {
         List<String> process = bcp.getProcess().process;
+        String nameOfProcess = bcp.getNameOfProcess();
         String instructions = "";
         pc = bcp.getPc();
-        int maxLengthProcess = process.size();
         int time = 1;
         x = bcp.getX();
         y = bcp.getY();
         bcp.setState("EXECUTANDO");
 
-        while (time < quantum + 1) {
+        while (time < bcp.getTimesBlocked()) {
             // Update number of instructions
             numberOfInstructions++;
 
@@ -133,27 +139,11 @@ public class Schedurler {
 
             // End of Process
             if (line.equals("SAIDA")) {
-                lines.add(process.get(0)+ " terminado. X=" + bcp.getX() + "y=" + bcp.getY());
+                lines.add(nameOfProcess + " terminado. X=" + bcp.getX() + " y=" + bcp.getY());
                 readyQueue.removeOfQueue(bcp);
                 memory.remove(bcp.getProcess());
 
-                switch (whatQueue) {
-                    case 1:
-                        primaryQueue.remove(bcp);
-                        break;
-
-                    case 2:
-                        secondaryQueue.remove(bcp);
-                        break;
-
-                    case 3:
-                        thirtyQueue.remove(bcp);
-                        break;
-
-                    case 4:
-                        fourthQueue.remove(bcp);
-                        break;
-                }
+                _removeFromQueues(bcp, whatQueue);
 
                 return;
             }
@@ -163,6 +153,9 @@ public class Schedurler {
 
             // Interruption of E/S
             if (line.equals("E/S")) {
+                // Update number of changes
+                changes++;
+
                 instructions = "(havia apenas a E/S)";
 
                 if (time == 2) {
@@ -171,23 +164,16 @@ public class Schedurler {
                     instructions = "(havia dois comando antes da E/S)";
                 }
 
-                lines.add("E/S iniciada em " +process.get(0));
-                lines.add("Interrompendo " + process.get(0) + "após " + time + "instruções " + instructions);
+                lines.add("E/S iniciada em " + nameOfProcess);
+                lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções " + instructions);
 
                 _saveInBcp(bcp, "BLOQUEIADO");
+                bcp.updateTimes();
                 queueOfBlocked.addInQueue(bcp);
                 readyQueue.removeOfQueue(bcp);
 
-                switch (whatQueue) {
-                    case 2:
-                        primaryQueue.add(bcp);
-
-                    case 3:
-                        secondaryQueue.add(bcp);
-
-                    case 4:
-                        thirtyQueue.add(bcp);
-                }
+                _removeFromQueues(bcp, whatQueue);
+                _verifyAndRedistributeCredits();
 
                 return;
             }
@@ -198,26 +184,17 @@ public class Schedurler {
                 continue;
             }
 
-            boolean isXRegister;
-            boolean isYRegister;
-            boolean passFromEqual = false;
-
             // Discover if is assignment and which register is receiving the value
-            for (int i = 0; i < line.length(); i++) {
-                isXRegister = line.charAt(i) == 'x';
-                isYRegister = line.charAt(i) == 'y';
+            boolean isXRegister = line.charAt(0) == 'X';
+            boolean isYRegister = line.charAt(0) == 'Y';
+            boolean passFromEqual = line.charAt(1) == '=';
 
-                if (passFromEqual && isXRegister) {
-                    x = Integer.parseInt(line.substring(i));
-                    break;
-                }
+            if (passFromEqual && isXRegister) {
+                x = Integer.parseInt(line.substring(2, line.length()));
+            }
 
-                if (passFromEqual && isYRegister) {
-                    y = Integer.parseInt(line.substring(i));
-                    break;
-                }
-
-                passFromEqual = line.charAt(i) == '=';
+            if (passFromEqual && isYRegister) {
+                y = Integer.parseInt(line.substring(2, line.length()));
             }
         }
 
@@ -226,7 +203,11 @@ public class Schedurler {
         // Update number of changes
         changes++;
 
-        lines.add("Interrompendo " + process.get(0) + "após " + time + "instruções " + instructions);
+        _addInPreviusCreditQueue(bcp, whatQueue);
+        _removeFromQueues(bcp, whatQueue);
+        _verifyAndRedistributeCredits();
+
+        lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções " + instructions);
     }
 
     private static void _saveInBcp(Bcp bcp, String state) {
@@ -238,71 +219,187 @@ public class Schedurler {
         bcp.setCredits(credit - 1);
     }
 
+
+    // Redistribute credits
+    private static void _verifyAndRedistributeCredits() {
+        boolean allZeroCredits = true;
+        if (!primaryQueue.isEmpty()) {
+            for (Bcp element : primaryQueue) {
+                if (element.getCredits() > 0) {
+                    allZeroCredits = false;
+                }
+            }
+
+            if (allZeroCredits) {
+                _initializeQueuesOfCredits();
+            }
+        }
+    }
+
+    // Verify credits for blockedQueue
+    private static void _verifyCreditsBlocked() {
+        boolean allZeroCredits = true;
+        if (!queueOfBlocked.empty()) {
+            for (Bcp element : queueOfBlocked.getQueue()) {
+                if (element.getCredits() > 0) {
+                    allZeroCredits = false;
+                }
+            }
+        }
+        if (allZeroCredits) {
+            _redistributeBlockedQueueCredits();
+        }
+    }
+
+    private static void _redistributeBlockedQueueCredits() {
+        for (Bcp element : queueOfBlocked.getQueue()) {
+            element.setCredits(element.getPriority());
+        }
+    }
+
+    private static void _removeFromQueues(Bcp bcp, int whatQueue) {
+        switch (whatQueue) {
+            case 1:
+                primaryQueue.remove(bcp);
+                break;
+
+            case 2:
+                secondaryQueue.remove(bcp);
+                break;
+
+            case 3:
+                thirtyQueue.remove(bcp);
+                break;
+
+            case 4:
+                fourthQueue.remove(bcp);
+                break;
+        }
+    }
+
+    private static void _addInPreviusCreditQueue(Bcp bcp, int whatQueue) {
+        switch (whatQueue) {
+            case 0:
+                _verifyCreditsBlocked();
+                _verifyAndRedistributeCredits();
+
+            case 1:
+                primaryQueue.add(bcp);
+                break;
+
+            case 2:
+                primaryQueue.add(bcp);
+                break;
+
+            case 3:
+                secondaryQueue.add(bcp);
+                break;
+
+            case 4:
+                thirtyQueue.add(bcp);
+                break;
+        }
+    }
+
     public static void showQueue(int what) {
         switch (what) {
             case 1:
                 System.out.println("Fila 1 quantum");
                 for (Bcp element : primaryQueue) {
-                    System.out.println(element.getProcess().process.get(0));
+                    String nameOfProcess = element.getNameOfProcess();
+                    System.out.println(nameOfProcess);
                 }
                 break;
 
             case 2:
                 System.out.println("Fila 2 quantum");
                 for (Bcp element : secondaryQueue) {
-                    System.out.println(element.getProcess().process.get(0));
+                    String nameOfProcess = element.getNameOfProcess();
+                    System.out.println(nameOfProcess);
                 }
                 break;
 
             case 3:
                 System.out.println("Fila 3 quantum");
                 for (Bcp element : thirtyQueue) {
-                    System.out.println(element.getProcess().process.get(0));
+                    String nameOfProcess = element.getNameOfProcess();
+                    System.out.println(nameOfProcess);
                 }
                 break;
 
             case 4:
                 System.out.println("Fila 4 quantum");
                 for (Bcp element : fourthQueue) {
-                    System.out.println(element.getProcess().process.get(0));
+                    String nameOfProcess = element.getNameOfProcess();
+                    System.out.println(nameOfProcess);
                 }
                 break;
         }
     }
 
     public static void execute() {
-        int credits = 4;
         _initializeQueuesOfCredits();
+        String nameOfProcess;
 
-        while (!primaryQueue.isEmpty()) {
+        // Loop in credit queues
+        while (!primaryQueue.isEmpty() || !queueOfBlocked.empty()) {
+            //queueOfBlocked.showQueue();
+
+            if (!queueOfBlocked.empty()) {
+                // Remove of blocked queue and insert in credit queue and ready queue if 3 quantum have passed
+                if (queueOfBlocked.checkIfFirstOfQueueOverWaittingTime()) {
+                    Bcp bcp = queueOfBlocked.removeOfQueue();
+                    bcp.setState("PRONTO");
+                    readyQueue.addInQueue(bcp);
+                    readyQueue.orderByPriority();
+                    _addInPreviusCreditQueue(bcp, bcp.getCredits() + 1);
+                }
+            }
+
             if (!fourthQueue.isEmpty()) {
-                Bcp bcp = fourthQueue.poll();
+                //showQueue(4);
+                Bcp bcp = fourthQueue.remove();
+                nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
-                lines.add("Executando " +bcp.getProcess().process.get(0));
+                lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 4);
-                showQueue(4);
+
+                // Update clock when pass instruction
+                bcp.decreaseWaittingTime();
             } else if (!thirtyQueue.isEmpty()) {
+                //showQueue(3);
                 Bcp bcp = thirtyQueue.remove();
+                nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
-                lines.add("Executando " +bcp.getProcess().process.get(0));
+                lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 3);
-                showQueue(3);
+
+                // Update clock when pass instruction
+                bcp.decreaseWaittingTime();
             } else if (!secondaryQueue.isEmpty()) {
+                //showQueue(2);
                 Bcp bcp = secondaryQueue.remove();
+                nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
-                lines.add("Executando " +bcp.getProcess().process.get(0));
+                lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 2);
-                showQueue(3);
+
+                // Update clock when pass instruction
+                bcp.decreaseWaittingTime();
             } else if (!primaryQueue.isEmpty()) {
+                //showQueue(1);
                 Bcp bcp = primaryQueue.remove();
+                nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
-                lines.add("Executando " +bcp.getProcess().process.get(0));
+                lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 1);
-                showQueue(1);
+
+                // Update clock when pass instruction
+                bcp.decreaseWaittingTime();
             }
         }
     }
@@ -310,10 +407,11 @@ public class Schedurler {
     public static void main(String[] args) {
         // Read All txt files and setup process, priority and quantum
         _readAndSetup();
-        readyQueue.showQueue();
 
+        // Execute round robin and credit algorithm
         execute();
 
+        // Write a logFile
         _writeLogFile();
     }
 }

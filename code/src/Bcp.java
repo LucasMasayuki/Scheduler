@@ -4,25 +4,23 @@ public class Bcp {
     private int priority;
     private int x = 0;
     private int y = 0;
-    private int credits;
+    private int credits = 0;
     private Process process;
+    private String nameOfProcess;
+    private int times;
+    private int waittingTime = 0;
 
-    public Bcp(int pc, String state, int priority, int x, int y, int credits, Process process) {
+    public Bcp(int pc, String state, int priority, Process process, String nameOfProcess, int quantum) {
         this.state = state;
         this.pc = pc;
         this.priority = priority;
-        this.x = x;
-        this.y = y;
-        this.credits = credits;
         this.process = process;
+        this.nameOfProcess = nameOfProcess;
+        this.times = quantum;
     }
 
-    public Bcp(int pc, String state, int priority, int credits, Process process) {
-        this.state = state;
-        this.pc = pc;
-        this.priority = priority;
-        this.credits = credits;
-        this.process = process;
+    public String getNameOfProcess() {
+        return nameOfProcess;
     }
 
     public Process getProcess() {
@@ -79,5 +77,25 @@ public class Bcp {
 
     public void setCredits(int credits) {
         this.credits = credits;
+    }
+
+    public void updateTimes() {
+        this.times *= 2;
+    }
+
+    public int getTimesBlocked() {
+        return this.times;
+    }
+
+    public void decreaseWaittingTime() {
+        this.waittingTime--;
+    }
+
+    public void setWaittingTime() {
+        this.waittingTime = 2;
+    }
+
+    public boolean overWaittingTime() {
+        return this.waittingTime == 0;
     }
 }
