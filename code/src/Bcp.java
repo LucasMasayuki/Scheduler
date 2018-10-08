@@ -1,13 +1,13 @@
 public class Bcp {
-    private int pc;
+    private int pc = 1;
     private String state;
     private int priority;
-    private String x;
-    private String y;
+    private int x = 0;
+    private int y = 0;
     private int credits;
     private Process process;
 
-    public Bcp(int pc, String state, int priority, String x, String y, int credits, Process process) {
+    public Bcp(int pc, String state, int priority, int x, int y, int credits, Process process) {
         this.state = state;
         this.pc = pc;
         this.priority = priority;
@@ -26,7 +26,7 @@ public class Bcp {
     }
 
     public Process getProcess() {
-        return process;
+        return this.process;
     }
 
     public void setProcess(Process process) {
@@ -34,7 +34,7 @@ public class Bcp {
     }
 
     public int getPc() {
-        return pc;
+        return this.pc;
     }
 
     public void setPc(int pc) {
@@ -42,7 +42,7 @@ public class Bcp {
     }
 
     public String getState() {
-        return state;
+        return this.state;
     }
 
     public void setState(String state) {
@@ -50,31 +50,31 @@ public class Bcp {
     }
 
     public int getPriority() {
-        return priority;
+        return this.priority;
     }
 
     public void setPriority(int priority) {
         this.priority = priority;
     }
 
-    public String getX() {
-        return x;
+    public int getX() {
+        return this.x;
     }
 
-    public void setX(String x) {
+    public void setX(int x) {
         this.x = x;
     }
 
-    public String getY() {
-        return y;
+    public int getY() {
+        return this.y;
     }
 
-    public void setY(String y) {
+    public void setY(int y) {
         this.y = y;
     }
 
     public int getCredits() {
-        return credits;
+        return this.credits;
     }
 
     public void setCredits(int credits) {

@@ -5,18 +5,13 @@ public class PriorityComparator implements Comparator<Bcp> {
     @Override
     public int compare(Bcp x, Bcp y)
     {
-        // Assume neither string is null. Real code should
-        // probably be more robust
-        // You could also just return x.length() - y.length(),
-        // which would be more efficient.
-        if (x.getPriority() < y.getPriority())
-        {
-            return y.getPriority();
+        int past = x.getPriority();
+        int current = y.getPriority();
+
+        if (past <= current) {
+            return 1;
         }
-        if (x.getPriority() > y.getPriority())
-        {
-            return x.getPriority();
-        }
-        return x.getPriority();
+
+        return -1;
     }
 }

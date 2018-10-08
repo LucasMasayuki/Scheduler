@@ -11,4 +11,8 @@ public class Memory {
     public void get(int index) {
         memory.get(index);
     }
+
+    public void remove(Process process) {
+        memory.remove(process);
+    }
 }

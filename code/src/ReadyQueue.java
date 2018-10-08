@@ -1,15 +1,31 @@
-import java.util.Comparator;
-import java.util.PriorityQueue;
+import java.util.*;
 
 public class ReadyQueue {
-    private Comparator<Bcp> comparator = new PriorityComparator();
-    private PriorityQueue<Bcp> queue = new PriorityQueue<Bcp>(10, comparator);
-
-    public Bcp removeOfQueue() {
-        return queue.remove();
-    }
+    private List<Bcp> queue = new ArrayList<>();
 
     public void addInQueue(Bcp bcp) {
         queue.add(bcp);
+    }
+
+    public void removeOfQueue(Bcp bcp) {
+        queue.remove(bcp);
+    }
+
+    public void showQueue() {
+        System.out.println("Fila de prontos");
+        for (Bcp element : queue) {
+            System.out.println(element.getProcess().process.get(0));
+        }
+    }
+
+    public void orderByPriority() {
+        if (queue.size() > 0) {
+            Comparator<Bcp> comparator = new PriorityComparator();
+            Collections.sort(queue, comparator);
+        }
+    }
+
+    public List<Bcp> getQueue() {
+        return this.queue;
     }
 }
