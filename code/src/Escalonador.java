@@ -15,15 +15,14 @@ public class Escalonador {
     private static int changes = 0;
     private static int numberOfInstructions = 0;
 
-    private static Queue<Bcp> primaryQueue = new LinkedList<>();
-    private static Queue<Bcp> secondaryQueue = new LinkedList<>();
-    private static Queue<Bcp> thirtyQueue = new LinkedList<>();
-    private static Queue<Bcp> fourthQueue = new LinkedList<>();
+    private static List<Bcp> primaryQueue = new LinkedList<>();
+    private static List<Bcp> secondaryQueue = new LinkedList<>();
+    private static List<Bcp> thirtyQueue = new LinkedList<>();
+    private static List<Bcp> fourthQueue = new LinkedList<>();
     private static ReadyQueue readyQueue = new ReadyQueue();
     private static QueueOfBlocked queueOfBlocked = new QueueOfBlocked();
     private static TableOfProcess tableOfProcess = new TableOfProcess();
-    private static List<String> lines = new ArrayList();
-    private static List<Queue> priorityQueues = new ArrayList();
+    private static List<String> lines = new ArrayList<>();
     private static Memory memory = new Memory();
 
     private static void _readAndSetup() {
@@ -45,13 +44,14 @@ public class Escalonador {
                 index = "0" + index;
             }
 
+            // Read the processes files
             fileName = "code/src/" + index + ".txt";
             List<String> readTxt = txtHelper.readStringFiles(fileName);
-            String nameOfProcess = readTxt.get(0);
-            readTxt.remove(0);
 
-            // Write load file in logfile
-            lines.add("Carregando " + nameOfProcess);
+            String nameOfProcess = readTxt.get(0);
+
+            // Remove the first line(processs name)
+            readTxt.remove(0);
 
             // Read file and transform in process object
             Process process = new Process(readTxt);
@@ -68,12 +68,23 @@ public class Escalonador {
             tableOfProcess.insert(bcp);
         }
         readyQueue.orderByPriority();
+        _loadProcesses();
+    }
+
+    private static void _loadProcesses() {
+        for (Bcp element : readyQueue.getQueue()) {
+            // Write load file in logfile
+            lines.add("Carregando " + element.getNameOfProcess());
+        }
     }
 
     private static void _writeLogFile() {
+        // Calculate the stats
         int averageChanges = _calculateAverage("changes");
         int averageInstructions = _calculateAverage("instructions");
 
+        lines.add("TROCAS: "+ changes);
+        lines.add("INSTRUCOES: "+ numberOfInstructions);
         lines.add("MEDIA DE TROCAS: "+ averageChanges);
         lines.add("MEDIA DE INSTRUCOES: "+ averageInstructions);
         lines.add("QUANTUM: "+ quantum);
@@ -125,37 +136,52 @@ public class Escalonador {
         List<String> process = bcp.getProcess().process;
         String nameOfProcess = bcp.getNameOfProcess();
         String instructions = "";
-        pc = bcp.getPc();
+
+        // Number of instructions executed
         int time = 1;
+
+        // Get the pc and register of bcp
+        pc = bcp.getPc();
         x = bcp.getX();
         y = bcp.getY();
+
+        // Execute process
         bcp.setState("EXECUTANDO");
 
         while (time < bcp.getTimesBlocked()) {
+
             // Update number of instructions
             numberOfInstructions++;
 
+            // Get the line in process by pc
             String line = process.get(pc);
 
             // End of Process
             if (line.equals("SAIDA")) {
                 lines.add(nameOfProcess + " terminado. X=" + bcp.getX() + " y=" + bcp.getY());
+
+                // Remove process from memory, ready queue, credit queues and table of process
                 readyQueue.removeOfQueue(bcp);
                 memory.remove(bcp.getProcess());
-
+                tableOfProcess.removeOfTable(bcp);
                 _removeFromQueues(bcp, whatQueue);
+
+                // Update number of changes
+                changes++;
 
                 return;
             }
 
-            // update pc in schedule
+            // Update pc in schedule
             pc++;
 
             // Interruption of E/S
             if (line.equals("E/S")) {
+
                 // Update number of changes
                 changes++;
 
+                // For logfile
                 instructions = "(havia apenas a E/S)";
 
                 if (time == 2) {
@@ -167,17 +193,28 @@ public class Escalonador {
                 lines.add("E/S iniciada em " + nameOfProcess);
                 lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções " + instructions);
 
+                // Block process
                 _saveInBcp(bcp, "BLOQUEIADO");
+
+                // Doubles the quantum for the next time the process runs
                 bcp.updateTimes();
+
+                // Starts timer blocked in two
+                bcp.setWaittingTime();
+
+                // Add in blocked queue
                 queueOfBlocked.addInQueue(bcp);
+
+                // Remove from ready queue
                 readyQueue.removeOfQueue(bcp);
 
+                // Remove from credit queue
                 _removeFromQueues(bcp, whatQueue);
-                _verifyAndRedistributeCredits();
 
                 return;
             }
 
+            // Update number of commands executed
             time++;
 
             if (line.equals("COM")) {
@@ -198,15 +235,19 @@ public class Escalonador {
             }
         }
 
+        // Put ready state and remove executing state, decrease the credits
         _saveInBcp(bcp, "PRONTO");
 
         // Update number of changes
         changes++;
 
+        // Add in inferior credit queue
         _addInPreviusCreditQueue(bcp, whatQueue);
-        _removeFromQueues(bcp, whatQueue);
-        _verifyAndRedistributeCredits();
 
+        // Remove from current queue
+        _removeFromQueues(bcp, whatQueue);
+
+        // Logfile
         lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções " + instructions);
     }
 
@@ -216,7 +257,9 @@ public class Escalonador {
         bcp.setPc(pc);
         bcp.setState(state);
         int credit = bcp.getCredits();
-        bcp.setCredits(credit - 1);
+        if (credit > 0) {
+            bcp.setCredits(credit - 1);
+        }
     }
 
 
@@ -229,16 +272,8 @@ public class Escalonador {
                     allZeroCredits = false;
                 }
             }
-
-            if (allZeroCredits) {
-                _initializeQueuesOfCredits();
-            }
         }
-    }
 
-    // Verify credits for blockedQueue
-    private static void _verifyCreditsBlocked() {
-        boolean allZeroCredits = true;
         if (!queueOfBlocked.empty()) {
             for (Bcp element : queueOfBlocked.getQueue()) {
                 if (element.getCredits() > 0) {
@@ -246,13 +281,14 @@ public class Escalonador {
                 }
             }
         }
+
         if (allZeroCredits) {
-            _redistributeBlockedQueueCredits();
+            _redistributeCredits();
         }
     }
 
-    private static void _redistributeBlockedQueueCredits() {
-        for (Bcp element : queueOfBlocked.getQueue()) {
+    private static void _redistributeCredits() {
+        for (Bcp element : readyQueue.getQueue()) {
             element.setCredits(element.getPriority());
         }
     }
@@ -280,23 +316,23 @@ public class Escalonador {
     private static void _addInPreviusCreditQueue(Bcp bcp, int whatQueue) {
         switch (whatQueue) {
             case 0:
-                _verifyCreditsBlocked();
-                _verifyAndRedistributeCredits();
+                primaryQueue.add(bcp);
+                break;
 
             case 1:
                 primaryQueue.add(bcp);
                 break;
 
             case 2:
-                primaryQueue.add(bcp);
+                primaryQueue.add(0, bcp);
                 break;
 
             case 3:
-                secondaryQueue.add(bcp);
+                secondaryQueue.add(0, bcp);
                 break;
 
             case 4:
-                thirtyQueue.add(bcp);
+                thirtyQueue.add(0, bcp);
                 break;
         }
     }
@@ -338,69 +374,77 @@ public class Escalonador {
     }
 
     public static void execute() {
-        _initializeQueuesOfCredits();
         String nameOfProcess;
+
+        // Distribute credits
+        _initializeQueuesOfCredits();
 
         // Loop in credit queues
         while (!primaryQueue.isEmpty() || !queueOfBlocked.empty()) {
-            //queueOfBlocked.showQueue();
+            queueOfBlocked.showQueue();
 
             if (!queueOfBlocked.empty()) {
-                // Remove of blocked queue and insert in credit queue and ready queue if 3 quantum have passed
+
+                // Remove of blocked queue and insert in credit queue and ready queue if 2 quantum have passed
                 if (queueOfBlocked.checkIfFirstOfQueueOverWaittingTime()) {
+
+                    // Remove from blocked queue
                     Bcp bcp = queueOfBlocked.removeOfQueue();
+
+                    // Put in ready queue and reorder the queue
                     bcp.setState("PRONTO");
                     readyQueue.addInQueue(bcp);
                     readyQueue.orderByPriority();
-                    _addInPreviusCreditQueue(bcp, bcp.getCredits() + 1);
+
+                    // Add in credit queue
+                    _addInPreviusCreditQueue(bcp, bcp.getCredits());
                 }
             }
 
+            // Starts by checking if the queue of four credits is decreasing
             if (!fourthQueue.isEmpty()) {
-                //showQueue(4);
-                Bcp bcp = fourthQueue.remove();
+                showQueue(4);
+                Bcp bcp = fourthQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
                 lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 4);
-
-                // Update clock when pass instruction
-                bcp.decreaseWaittingTime();
             } else if (!thirtyQueue.isEmpty()) {
-                //showQueue(3);
-                Bcp bcp = thirtyQueue.remove();
+                showQueue(3);
+                Bcp bcp = thirtyQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
                 lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 3);
-
-                // Update clock when pass instruction
-                bcp.decreaseWaittingTime();
             } else if (!secondaryQueue.isEmpty()) {
-                //showQueue(2);
-                Bcp bcp = secondaryQueue.remove();
+                showQueue(2);
+                Bcp bcp = secondaryQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
                 lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 2);
-
-                // Update clock when pass instruction
-                bcp.decreaseWaittingTime();
             } else if (!primaryQueue.isEmpty()) {
-                //showQueue(1);
-                Bcp bcp = primaryQueue.remove();
+                showQueue(1);
+                Bcp bcp = primaryQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
                 // Write exec in logfile
                 lines.add("Executando " + nameOfProcess);
                 _executeProcess(bcp, lines, 1);
+            }
 
+            // Decrease the waiting time of blocked processes
+            if (!queueOfBlocked.empty()) {
+                Bcp bcp = queueOfBlocked.getQueue().peek();
                 // Update clock when pass instruction
                 bcp.decreaseWaittingTime();
             }
+
+            // Verify if all elements in queue have credit 0
+            _verifyAndRedistributeCredits();
         }
     }
 

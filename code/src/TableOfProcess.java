@@ -16,4 +16,8 @@ public class TableOfProcess {
             Collections.sort(table, comparator);
         }
     }
+
+    public void removeOfTable(Bcp bcp) {
+        table.remove(bcp);
+    }
 }
