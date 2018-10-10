@@ -1,6 +1,6 @@
 public class Bcp {
-    private int pc = 1;
-    private String state;
+    private int pc;
+    private String psw;
     private int priority;
     private int x = 0;
     private int y = 0;
@@ -10,8 +10,8 @@ public class Bcp {
     private int times;
     private int waittingTime = 0;
 
-    public Bcp(int pc, String state, int priority, Process process, String nameOfProcess, int quantum) {
-        this.state = state;
+    public Bcp(int pc, String psw, int priority, Process process, String nameOfProcess, int quantum) {
+        this.psw = psw;
         this.pc = pc;
         this.priority = priority;
         this.process = process;
@@ -40,11 +40,11 @@ public class Bcp {
     }
 
     public String getState() {
-        return this.state;
+        return this.psw;
     }
 
-    public void setState(String state) {
-        this.state = state;
+    public void setState(String psw) {
+        this.psw = psw;
     }
 
     public int getPriority() {
@@ -83,7 +83,7 @@ public class Bcp {
         this.times *= 2;
     }
 
-    public int getTimesBlocked() {
+    public int getTimes() {
         return this.times;
     }
 

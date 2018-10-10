@@ -20,4 +20,24 @@ public class TableOfProcess {
     public void removeOfTable(Bcp bcp) {
         table.remove(bcp);
     }
+
+    public Bcp getProcess(int i) {
+        return table.get(i);
+    }
+
+    public int getReferenceOfBcp(Bcp bcp) {
+        return table.indexOf(bcp);
+    }
+
+    public void showTable() {
+        System.out.println("teste");
+        for (Bcp element : table ) {
+            System.out.println(element.getNameOfProcess());
+        }
+
+    }
+
+    public boolean empty() {
+        return table.isEmpty();
+    }
 }

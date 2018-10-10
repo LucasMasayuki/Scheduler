@@ -2,15 +2,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Memory {
-    private static List<Process> memory = new ArrayList<>();
+    private List<List<String>> memory = new ArrayList<List<String>>();
 
-    public void save(Process process) {
-        memory.add(process);
+    public void save(List<String> process) {
+        this.memory.add(process);
     }
 
-    public void get(int index) {
-        memory.get(index);
+    public List<String> get(int index) {
+        return memory.get(index);
     }
+
+    public int getReference(List<String> process) { return memory.indexOf(process); }
 
     public void remove(Process process) {
         memory.remove(process);

@@ -14,7 +14,7 @@ public class ReadyQueue {
     public void showQueue() {
         System.out.println("Fila de prontos");
         for (Bcp element : queue) {
-            System.out.println(element.getProcess().process.get(0));
+            System.out.println(element.getNameOfProcess());
         }
     }
 

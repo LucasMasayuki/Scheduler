@@ -1,9 +1,7 @@
-import java.util.List;
-
 public class Process {
-    public List<String> process;
+    public int referenceOfMemory;
 
-    public Process(List<String> process) {
-        this.process = process;
+    public Process(int reference) {
+        this.referenceOfMemory = reference;
     }
 }

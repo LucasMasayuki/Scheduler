@@ -6,11 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TxtHelper {
-    public static List<Integer> readIntegerFiles(String fileName) {
+    public List<Integer> readIntegerFiles(String fileName) {
         try {
             String line;
             BufferedReader reader = new BufferedReader(new FileReader(fileName));
-            List<Integer> txt = new ArrayList<>();;
+            List<Integer> txt = new ArrayList<>();
 
             while ((line = reader.readLine()) != null) {
                 txt.add(Integer.parseInt(line));
@@ -27,11 +27,11 @@ public class TxtHelper {
         return null;
     }
 
-    public static List<String> readStringFiles(String fileName) {
+    public List<String> readStringFiles(String fileName) {
         try {
             String line;
             BufferedReader reader = new BufferedReader(new FileReader(fileName));
-            List<String> txt = new ArrayList<>();;
+            List<String> txt = new ArrayList<>();
 
             while ((line = reader.readLine()) != null) {
                 txt.add(line);
@@ -47,20 +47,4 @@ public class TxtHelper {
 
         return null;
     }
-
-    // Separate Text by enter and return array
-//    public List<Object> separateTextByEnter(String txt, List<Object> array) {
-//        String text = "";
-//
-//        for (int i = 0; i < txt.length(); i++) {
-//            // If enter add text to array
-//            if ("\n".equals(txt.charAt(i))) {
-//                array.add(text);
-//            } else {
-//                text +=  txt.charAt(i);
-//            }
-//        }
-//
-//        return array;
-//    }
 }
