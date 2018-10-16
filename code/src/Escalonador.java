@@ -9,7 +9,6 @@ public class Escalonador {
     private static int quantum;
     private static int maxFiles = 10;
     private static int changes = 0;
-    private static int numberOfInstructions = 0;
 
     private static List<Bcp> primaryQueue = new LinkedList<>();
     private static List<Bcp> secondaryQueue = new LinkedList<>();
@@ -19,6 +18,7 @@ public class Escalonador {
     private static QueueOfBlocked queueOfBlocked = new QueueOfBlocked();
     private static TableOfProcess tableOfProcess = new TableOfProcess();
     private static List<String> lines = new ArrayList<>();
+    private static Map<Integer, Integer> groupOfQuantums = new HashMap<Integer, Integer>();
     private static Memory memory = new Memory();
     private static Cpu cpu = new Cpu();
     private static Dispatcher dispatcher = new Dispatcher();
@@ -80,6 +80,7 @@ public class Escalonador {
             // Insert in process Table
             tableOfProcess.insert(bcp);
         }
+
         readyQueue.orderByPriority();
         _loadProcesses();
     }
@@ -96,8 +97,6 @@ public class Escalonador {
         int averageChanges = _calculateAverage("changes");
         int averageInstructions = _calculateAverage("instructions");
 
-        lines.add("TROCAS: "+ changes);
-        lines.add("INSTRUCOES: "+ numberOfInstructions);
         lines.add("MEDIA DE TROCAS: "+ averageChanges);
         lines.add("MEDIA DE INSTRUCOES: "+ averageInstructions);
         lines.add("QUANTUM: "+ quantum);
@@ -123,7 +122,19 @@ public class Escalonador {
         if (what.equals("changes")) {
             return changes/maxFiles;
         }
-        return numberOfInstructions/quantum;
+        int numberOfInstructions = 0;
+        int instructions;
+        int time = 0;
+
+        // Makes sum of averages of the number of instructions grouped by quantum
+        for (Map.Entry<Integer, Integer> group : groupOfQuantums.entrySet()) {
+            time = group.getKey();
+            instructions = group.getValue();
+
+            numberOfInstructions += (instructions/time);
+        }
+
+        return numberOfInstructions;
     }
 
     private static void _initializeQueuesOfCredits() {
@@ -162,6 +173,8 @@ public class Escalonador {
 
         // Number of instructions executed
         int time = 1;
+        int numberOfInstructions = 0;
+        int pastNumber;
 
         int pc = cpu.getPc();
 
@@ -169,15 +182,24 @@ public class Escalonador {
         dispatcher.updateBcp(bcp, psw[1], cpu);
 
         while (time <= bcp.getTimes()) {
+            // Get the line in process by pc
+            String line = process.get(pc);
 
             // Update number of instructions
             numberOfInstructions++;
 
-            // Get the line in process by pc
-            String line = process.get(pc);
+            cpu.useCpu();
+            pc = cpu.getPc();
 
             // End of Process
             if (line.equals("SAIDA")) {
+                // Put in hashmap
+                try {
+                    groupOfQuantums.put(time, groupOfQuantums.get(time) + numberOfInstructions);
+                } catch (NullPointerException ex) {
+                    groupOfQuantums.put(time,  numberOfInstructions);
+                }
+
                 lines.add(nameOfProcess + " terminado. X=" + bcp.getX() + " y=" + bcp.getY());
 
                 // Remove process from memory, ready queue, credit queues and table of process
@@ -185,6 +207,7 @@ public class Escalonador {
                 memory.remove(bcp.getProcess());
                 tableOfProcess.removeOfTable(bcp);
                 _removeFromQueues(bcp, whatQueue);
+                cpu.freeCpu();
 
                 // Update number of changes
                 changes++;
@@ -192,26 +215,17 @@ public class Escalonador {
                 return;
             }
 
-            cpu.useCpu();
-            pc = cpu.getPc();
-
             // Interruption of E/S
             if (line.equals("E/S")) {
-
-                // Update number of changes
-                changes++;
-
-                // For logfile
-                instructions = "(havia apenas a E/S)";
-
-                if (time == 2) {
-                    instructions = "(havia um comando antes da E/S)";
-                } else if (time == 3){
-                    instructions = "(havia dois comando antes da E/S)";
+                // Put in hashmap
+                try {
+                    groupOfQuantums.put(time, groupOfQuantums.get(time) + numberOfInstructions);
+                } catch (NullPointerException ex) {
+                    groupOfQuantums.put(time,  numberOfInstructions);
                 }
 
                 lines.add("E/S iniciada em " + nameOfProcess);
-                lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções " + instructions);
+                lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções");
 
                 // Block process
                 dispatcher.updateBcp(bcp, psw[2], cpu);
@@ -233,6 +247,9 @@ public class Escalonador {
                 // Remove from credit queue
                 _removeFromQueues(bcp, whatQueue);
 
+                // Update number of changes
+                changes++;
+
                 return;
             }
 
@@ -244,6 +261,14 @@ public class Escalonador {
             }
 
             cpu.process(bcp, line);
+        }
+
+        // Over the quantum time
+        // Put in hashmap
+        try {
+            groupOfQuantums.put(time, groupOfQuantums.get(time) + numberOfInstructions);
+        } catch (NullPointerException ex) {
+            groupOfQuantums.put(time,  numberOfInstructions);
         }
 
         // Put ready state and remove executing state, decrease the credits
@@ -261,7 +286,7 @@ public class Escalonador {
         _addInPreviusCreditQueue(bcp, whatQueue);
 
         // Logfile
-        lines.add("Interrompendo " + nameOfProcess + " após " + (time - 1) + " instruções " + instructions);
+        lines.add("Interrompendo " + nameOfProcess + " após " + (time - 1) + " instruções");
     }
 
     // Redistribute credits
@@ -404,7 +429,7 @@ public class Escalonador {
 
             // Starts by checking if the queue of four credits is decreasing
             if (!fourthQueue.isEmpty()) {
-                //showQueue(4);
+                showQueue(4);
                 Bcp bcp = fourthQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
@@ -412,7 +437,7 @@ public class Escalonador {
                 lines.add(psw[1] + " " + nameOfProcess);
                 _executeProcess(bcp, lines, 4);
             } else if (!thirtyQueue.isEmpty()) {
-                //showQueue(3);
+                showQueue(3);
                 Bcp bcp = thirtyQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
@@ -420,7 +445,7 @@ public class Escalonador {
                 lines.add(psw[1] + " " + nameOfProcess);
                 _executeProcess(bcp, lines, 3);
             } else if (!secondaryQueue.isEmpty()) {
-                //showQueue(2);
+                showQueue(2);
                 Bcp bcp = secondaryQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
@@ -428,7 +453,7 @@ public class Escalonador {
                 lines.add(psw[1] + " " + nameOfProcess);
                 _executeProcess(bcp, lines, 2);
             } else if (!primaryQueue.isEmpty()) {
-                // showQueue(1);
+                showQueue(1);
                 Bcp bcp = primaryQueue.remove(0);
                 nameOfProcess = bcp.getNameOfProcess();
 
@@ -439,10 +464,10 @@ public class Escalonador {
 
             // Decrease the waiting time of blocked processes
             if (!queueOfBlocked.empty()) {
-                Bcp bcp = queueOfBlocked.getQueue().peek();
-
-                // Update clock when pass instruction
-                bcp.decreaseWaittingTime();
+                for(Bcp bcp : queueOfBlocked.getQueue()){
+                    // Update clock when process executed
+                    bcp.decreaseWaittingTime();
+                }
             }
 
             // Verify if all elements in queue have credit 0
@@ -459,5 +484,7 @@ public class Escalonador {
 
         // Write a logFile
         _writeLogFile();
+
+        System.out.println("Finalizado!!!");
     }
 }
