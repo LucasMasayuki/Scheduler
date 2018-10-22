@@ -10,6 +10,10 @@ public class TableOfProcess {
         table.add(bcp);
     }
 
+    public List<Bcp> getTable() {
+        return table;
+    }
+
     public void orderByPriority() {
         if (table.size() > 0) {
             Comparator<Bcp> comparator = new PriorityComparator();
@@ -21,7 +25,7 @@ public class TableOfProcess {
         table.remove(bcp);
     }
 
-    public Bcp getProcess(int i) {
+    public Bcp getBcp(int i) {
         return table.get(i);
     }
 
@@ -34,7 +38,6 @@ public class TableOfProcess {
         for (Bcp element : table ) {
             System.out.println(element.getNameOfProcess());
         }
-
     }
 
     public boolean empty() {

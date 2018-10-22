@@ -1,4 +1,4 @@
-public class Cpu {
+public class Processor {
     private int pc = 0;
     private int x = 0;
     private int y = 0;

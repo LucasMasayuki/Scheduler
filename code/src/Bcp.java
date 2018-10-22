@@ -14,6 +14,7 @@ public class Bcp {
         this.psw = psw;
         this.pc = pc;
         this.priority = priority;
+        this.credits = priority;
         this.process = process;
         this.nameOfProcess = nameOfProcess;
         this.times = quantum;
@@ -27,10 +28,6 @@ public class Bcp {
         return this.process;
     }
 
-    public void setProcess(Process process) {
-        this.process = process;
-    }
-
     public int getPc() {
         return this.pc;
     }
@@ -39,20 +36,12 @@ public class Bcp {
         this.pc = pc;
     }
 
-    public String getState() {
-        return this.psw;
-    }
-
     public void setState(String psw) {
         this.psw = psw;
     }
 
     public int getPriority() {
         return this.priority;
-    }
-
-    public void setPriority(int priority) {
-        this.priority = priority;
     }
 
     public int getX() {
@@ -85,6 +74,10 @@ public class Bcp {
 
     public int getTimes() {
         return this.times;
+    }
+
+    public int getWaittingTime() {
+        return this.waittingTime;
     }
 
     public void decreaseWaittingTime() {
