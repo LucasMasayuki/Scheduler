@@ -11,7 +11,6 @@ public class Escalonador {
     ) {
         boolean allZeroCredits = true;
         int maxcredits = readyQueue.size();
-        List<Bcp> tableOfProcess = table.getTable();
         List<Integer> queue;
         Bcp bcp;
 
@@ -19,7 +18,7 @@ public class Escalonador {
             queue = readyQueue.get(i);
             if (!queue.isEmpty()) {
                 for (int index: queue) {
-                    bcp = tableOfProcess.get(index);
+                    bcp = table.getBcp(index);
 
                     if (bcp.getCredits() > 0) {
                         allZeroCredits = false;
@@ -30,7 +29,7 @@ public class Escalonador {
 
         if (!queueOfBlocked.empty()) {
             for (int index : queueOfBlocked.getQueue()) {
-                bcp = tableOfProcess.get(index);
+                bcp = table.getBcp(index);
                 if (bcp.getCredits() > 0) {
                     allZeroCredits = false;
                 }
@@ -38,14 +37,14 @@ public class Escalonador {
         }
 
         if (allZeroCredits) {
-            _redistributeCredits(readyQueue, queueOfBlocked, tableOfProcess);
+            _redistributeCredits(readyQueue, queueOfBlocked, table);
         }
     }
 
     private static void _redistributeCredits(
             List<LinkedList<Integer>> readyQueue,
             QueueOfBlocked queueOfBlocked,
-            List<Bcp> tableOfProcess
+            TableOfProcess table
     ) {
         int maxcredits = readyQueue.size();
         List<Integer> queue;
@@ -56,7 +55,7 @@ public class Escalonador {
             if (!queue.isEmpty()) {
 
                 for (int reference : queue) {
-                    bcp = tableOfProcess.get(reference);
+                    bcp = table.getBcp(reference);
                     bcp.setCredits(bcp.getPriority());
                 }
             }
@@ -64,7 +63,7 @@ public class Escalonador {
 
         if (!queueOfBlocked.empty()) {
             for (int index : queueOfBlocked.getQueue()) {
-                bcp = tableOfProcess.get(index);
+                bcp = table.getBcp(index);
                 bcp.setCredits(bcp.getPriority());
             }
         }
@@ -100,22 +99,22 @@ public class Escalonador {
         memory.remove(bcp.getProcess());
 
         // Remove from table of process
-        tableOfProcess.removeOfTable(bcp);
+        tableOfProcess.removeOfTable(reference);
     }
 
     public void moveQueues(
             List<LinkedList<Integer>> readyQueue,
-            List<Bcp> tableOfProcess,
+            TableOfProcess tableOfProcess,
             int reference
     ) {
-        Bcp bcp = tableOfProcess.get(reference);
+        Bcp bcp = tableOfProcess.getBcp(reference);
         int credit = bcp.getCredits();
 
         readyQueue.get(credit).remove();
 
         if (credit != 0) {
             // if have more than 0 credits put the decrease credit in first of queue
-            readyQueue.get(credit).addFirst(reference);
+            readyQueue.get(credit - 1).addFirst(reference);
             return;
         }
 
@@ -146,8 +145,7 @@ public class Escalonador {
             List<LinkedList<Integer>> readyQueue,
             QueueOfBlocked queueOfBlocked,
             TableOfProcess tableOfProcess,
-            int maxPriority,
-            List<String> lines
+            int maxPriority
     ) {
         LinkedList<Integer> queue;
         int credit = 0;
@@ -156,7 +154,7 @@ public class Escalonador {
         _verifyAndRedistributeCredits(readyQueue, queueOfBlocked, tableOfProcess);
 
         // Get the higher credit queue
-        for (int i = maxPriority - 1; i > 0; i--) {
+        for (int i = maxPriority; i > 0; i--) {
             queue = readyQueue.get(i);
 
             if (!queue.isEmpty()) {

@@ -88,9 +88,9 @@ public class So {
             // Add to the correct credit list
             credit = bcp.getPriority();
 
-            // Insert in process Table
+            // Insert in process Table (is hash map, first get the address and after increase address)
+            indexOfTable = tableOfProcess.getReferenceOfBcp();
             tableOfProcess.insert(bcp);
-            indexOfTable = tableOfProcess.getReferenceOfBcp(bcp);
 
             // Enque index of bcp in ready queue with the correct credit index
             readyQueue.get(credit).add(indexOfTable);
@@ -100,9 +100,13 @@ public class So {
     }
 
     private static void _loadProcesses() {
-        for (Bcp element : tableOfProcess.getTable()) {
-            // Write load file in logfile
-            lines.add("Carregando " + element.getNameOfProcess());
+        int credit = maxPriority;
+        while (credit > 0) {
+            for (Integer reference : readyQueue.get(credit)) {
+                // Write load file in logfile
+                lines.add("Carregando " + tableOfProcess.getBcp(reference).getNameOfProcess());
+            }
+            credit--;
         }
     }
 
@@ -163,6 +167,8 @@ public class So {
         // Update number of commands executed
         time++;
 
+        System.out.println(line);
+
         // End of Process
         if (line.equals("SAIDA")) {
             lines.add(nameOfProcess + " terminado. X=" + bcp.getX() + " y=" + bcp.getY());
@@ -194,9 +200,19 @@ public class So {
         return line;
     }
 
+    private static void _verifyBlockedQueue() {
+        // Decrease the waiting time of blocked processes
+        Bcp bcp;
+        if (!queueOfBlocked.empty()) {
+            for(int referenceOfBlocked : queueOfBlocked.getQueue()){
+                bcp = tableOfProcess.getBcp(referenceOfBlocked);
+                dispatcher.updateWaittingTimeBcp(bcp);
+            }
+        }
+    }
+
     public static void main(String[] args) {
         LinkedList<Integer> queue;
-        List<Bcp> table = tableOfProcess.getTable();
         Bcp bcp;
         int reference = 0;
         String response = "";
@@ -204,7 +220,6 @@ public class So {
         boolean end = false;
         String nameOfProcess = "";
         int index;
-        int credit = maxPriority;
         int quntumquantum = 0;
         int bcpTime = 0;
 
@@ -216,25 +231,26 @@ public class So {
             queue = readyQueue.get(i);
 
             if (!queue.isEmpty()) {
-                reference = queue.get(0);
+                reference = queue.getFirst();
                 break;
             }
         }
 
         // Loop in credit queues
         while (!tableOfProcess.empty()) {
+            //tableOfProcess.showTable();
 //            for (int i = readyQueue.size() - 1; i > 0; i--) {
 //                LinkedList<Integer> list= readyQueue.get(i);
 //                System.out.println("fila" + i);
 //
 //                for (int re :list) {
-//                    System.out.println(tableOfProcess.getBcp(re).getNameOfProcess());
+//                    System.out.println(tableOfProcess.getBcp(re).getNameOfProcess() + " || créditos " + tableOfProcess.getBcp(re).getCredits() );
 //                }
 //            }
 
             if (!queueOfBlocked.empty()) {
-                queueOfBlocked.showQueue(tableOfProcess);
-                index = queueOfBlocked.getQueue().peek();
+                //queueOfBlocked.showQueue(tableOfProcess);
+                index = queueOfBlocked.peek();
                 bcp = tableOfProcess.getBcp(index);
 
                 // Remove of blocked queue and insert in credit queue and ready queue if 2 quantum have passed
@@ -244,7 +260,7 @@ public class So {
             }
 
             // Get the bcp in table of processes
-            bcp = table.get(reference);
+            bcp = tableOfProcess.getBcp(reference);
             nameOfProcess = bcp.getNameOfProcess();
 
             // Recover context
@@ -262,17 +278,17 @@ public class So {
             while (clock.timeOfProcess(quntumquantum, bcpTime)) {
                 response = _executeProcess(process, bcp, reference);
 
-                blocked = response == "E/S";
-                end = response == "SAIDA";
+                blocked = response.equals("E/S");
+                end = response.equals("SAIDA");
 
                 processor.useCpu();
+
+                quntumquantum = quntumquantum + 1;
 
                 // Over quantum or finish process
                 if (blocked || end) {
                     break;
                 }
-
-                quntumquantum = quntumquantum + 1;
             }
 
             // Update number of changes
@@ -286,11 +302,15 @@ public class So {
             if (blocked || end) {
                 blocked = false;
                 end = false;
+
+                _verifyBlockedQueue();
+
+                reference = escalonador.getNext(readyQueue, queueOfBlocked, tableOfProcess, maxPriority);
                 continue;
             }
 
             // Move queues
-            escalonador.moveQueues(readyQueue, table, reference);
+            escalonador.moveQueues(readyQueue, tableOfProcess, reference);
 
             // Put ready state and remove executing state, decrease the credits
             dispatcher.updateBcp(bcp, psw[0], processor, "OVERQUANTUM");
@@ -306,15 +326,9 @@ public class So {
             // Logfile
             lines.add("Interrompendo " + nameOfProcess + " após " + (time - 1) + " instruções");
 
-            // Decrease the waiting time of blocked processes
-            if (!queueOfBlocked.empty()) {
-                for(int referenceOfBlocked : queueOfBlocked.getQueue()){
-                    bcp = tableOfProcess.getBcp(referenceOfBlocked);
-                    dispatcher.updateWaittingTimeBcp(bcp);
-                }
-            }
+            _verifyBlockedQueue();
 
-            reference = escalonador.getNext(readyQueue, queueOfBlocked, tableOfProcess, maxPriority, lines);
+            reference = escalonador.getNext(readyQueue, queueOfBlocked, tableOfProcess, maxPriority);
         }
 
         // Write a logFile

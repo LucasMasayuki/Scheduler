@@ -30,7 +30,6 @@ public class Dispatcher {
 
                 // Starts timer blocked in two
                 bcp.setWaittingTime();
-                bcp.updateTimes();
 
                 if (credit > 0) {
                     bcp.setCredits(credit - 1);

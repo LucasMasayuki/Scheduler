@@ -24,8 +24,11 @@ public class QueueOfBlocked {
         for (int index : queue) {
             Bcp bcp = table.getBcp(index);
             String nameOfProcess = bcp.getNameOfProcess();
-            System.out.println(nameOfProcess);
+            System.out.println(nameOfProcess + " || creditos " + bcp.getCredits() + " || wait " +bcp.getWaittingTime());
         }
     }
 
+    public Integer peek() {
+        return queue.peek();
+    }
 }
