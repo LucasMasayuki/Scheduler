@@ -8,6 +8,7 @@ public class Bcp {
     private Process process;
     private String nameOfProcess;
     private int times;
+    private int quantum = 1;
     private int waittingTime = 0;
 
     public Bcp(int pc, String psw, int priority, Process process, String nameOfProcess, int quantum) {
@@ -69,7 +70,8 @@ public class Bcp {
     }
 
     public void updateTimes() {
-        this.times *= 2;
+        quantum++;
+        this.times *= quantum;
     }
 
     public int getTimes() {
@@ -86,9 +88,5 @@ public class Bcp {
 
     public void setWaittingTime() {
         this.waittingTime = 2;
-    }
-
-    public boolean overWaittingTime() {
-        return this.waittingTime == 0;
     }
 }

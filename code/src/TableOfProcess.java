@@ -29,10 +29,11 @@ public class TableOfProcess {
     }
 
     public void showTable() {
-        System.out.println("teste");
+        System.out.println("tabela");
         for (Integer reference : table.keySet()) {
-            System.out.println(table.get(reference).getNameOfProcess());
+            System.out.println(table.get(reference).getNameOfProcess() + " || reference " + reference);
         }
+        System.out.println();
     }
 
     public Map<Integer, Bcp> getTable() {

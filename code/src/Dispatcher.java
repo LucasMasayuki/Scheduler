@@ -17,8 +17,6 @@ public class Dispatcher {
             bcp.setState(psw);
         }
 
-        int credit = bcp.getCredits();
-
         bcp.setX(processor.getX());
         bcp.setPc(processor.getPc());
         bcp.setY(processor.getY());
@@ -27,13 +25,10 @@ public class Dispatcher {
             case "E/S":
                 // Doubles the quantum for the next time the process runs
                 bcp.updateTimes();
+                bcp.setPc(bcp.getPc() + 1);
 
                 // Starts timer blocked in two
                 bcp.setWaittingTime();
-
-                if (credit > 0) {
-                    bcp.setCredits(credit - 1);
-                }
 
                 break;
 
@@ -41,15 +36,19 @@ public class Dispatcher {
                 // Doubles the quantum for the next time the process runs
                 bcp.updateTimes();
 
-                if (credit > 0) {
-                    bcp.setCredits(credit - 1);
-                }
-
                 break;
         }
     }
 
+    public void decreaseCredit(Bcp bcp) {
+        bcp.setCredits(bcp.getCredits() - 1);
+    }
+
     public void updateWaittingTimeBcp(Bcp bcp) {
         bcp.decreaseWaittingTime();
+    }
+
+    public void returnToDone(Bcp bcp) {
+        bcp.setState("PRONTO");
     }
 }

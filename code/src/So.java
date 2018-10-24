@@ -12,7 +12,7 @@ public class So {
     private static int maxFiles = 10;
     private static int changes = 0;
     private static int maxPriority = 0;
-    private static int time = 1;
+    private static int numberOfInstructions = 0;
     private static String[] psw = { "PRONTO", "EXECUTANDO", "BLOQUEIADO" };
 
     private static List<LinkedList<Integer>> readyQueue = new ArrayList<>();
@@ -115,6 +115,8 @@ public class So {
         int averageChanges = _calculateAverage("changes");
         int averageInstructions = _calculateAverage("instructions");
 
+        lines.add("TROCAS: "+ changes);
+        lines.add("INSTRUCOES: "+ numberOfInstructions);
         lines.add("MEDIA DE TROCAS: "+ averageChanges);
         lines.add("MEDIA DE INSTRUCOES: "+ averageInstructions);
         lines.add("QUANTUM: "+ quantum);
@@ -140,6 +142,7 @@ public class So {
         if (what.equals("changes")) {
             return changes/maxFiles;
         }
+
         int numberOfInstructions = 0;
         int instructions;
         int time = 0;
@@ -152,11 +155,13 @@ public class So {
             numberOfInstructions += (instructions/time);
         }
 
+        numberOfInstructions = time/maxFiles;
+
         return numberOfInstructions;
     }
 
     // Return true if block
-    private static String _executeProcess(List<String> process, Bcp bcp, int reference) {
+    private static String _executeProcess(List<String> process, Bcp bcp) {
         String nameOfProcess = bcp.getNameOfProcess();
 
         int pc = processor.getPc();
@@ -164,16 +169,12 @@ public class So {
         // Get the line in process by pc
         String line = process.get(pc);
 
-        // Update number of commands executed
-        time++;
-
-        System.out.println(line);
-
         // End of Process
         if (line.equals("SAIDA")) {
             lines.add(nameOfProcess + " terminado. X=" + bcp.getX() + " y=" + bcp.getY());
 
-            escalonador.removeDoneProcess(readyQueue, tableOfProcess, reference, memory);
+            // Remove from memory
+            memory.remove(bcp.getProcess());
 
             return line;
         }
@@ -181,9 +182,6 @@ public class So {
         // Interruption of E/S
         if (line.equals("E/S")) {
             lines.add("E/S iniciada em " + nameOfProcess);
-            lines.add("Interrompendo " + nameOfProcess + " após " + time + " instruções");
-
-            escalonador.moveToBlockedQueue(readyQueue, queueOfBlocked, tableOfProcess, reference);
 
             // Block process
             dispatcher.updateBcp(bcp, psw[2], processor, line);
@@ -211,17 +209,36 @@ public class So {
         }
     }
 
+    private static void _showQueue() {
+        for (int i = readyQueue.size() - 1; i >= 0; i--) {
+            LinkedList<Integer> list= readyQueue.get(i);
+            System.out.println("fila " + i);
+
+            for (int re :list) {
+                System.out.println(
+                        tableOfProcess.getBcp(re).getNameOfProcess()
+                                + " || créditos " +
+                                tableOfProcess.getBcp(re).getCredits()
+                                + "|| waittingtime " + tableOfProcess.getBcp(re).getWaittingTime()
+                                + "|| reference " + re
+                                + " || current pc " + tableOfProcess.getBcp(re).getPc()
+                );
+            }
+            System.out.println();
+        }
+    }
+
     public static void main(String[] args) {
         LinkedList<Integer> queue;
         Bcp bcp;
-        int reference = 0;
         String response = "";
+        String nameOfProcess = "";
+        Integer reference = 0;
         boolean blocked = false;
         boolean end = false;
-        String nameOfProcess = "";
-        int index;
         int quntumquantum = 0;
         int bcpTime = 0;
+        int countInstructions = 0;
 
         // Read All txt files and setup process, priority and quantum
         _readAndSetup();
@@ -238,25 +255,16 @@ public class So {
 
         // Loop in credit queues
         while (!tableOfProcess.empty()) {
-            //tableOfProcess.showTable();
-//            for (int i = readyQueue.size() - 1; i > 0; i--) {
-//                LinkedList<Integer> list= readyQueue.get(i);
-//                System.out.println("fila" + i);
-//
-//                for (int re :list) {
-//                    System.out.println(tableOfProcess.getBcp(re).getNameOfProcess() + " || créditos " + tableOfProcess.getBcp(re).getCredits() );
-//                }
-//            }
+            tableOfProcess.showTable();
+            _showQueue();
 
-            if (!queueOfBlocked.empty()) {
-                //queueOfBlocked.showQueue(tableOfProcess);
-                index = queueOfBlocked.peek();
-                bcp = tableOfProcess.getBcp(index);
+            System.out.println();
 
-                // Remove of blocked queue and insert in credit queue and ready queue if 2 quantum have passed
-                if (clock.returnToQueue(bcp.getWaittingTime())) {
-                    escalonador.returnBlockedInReadyQueue(readyQueue, queueOfBlocked, tableOfProcess);
-                }
+            // If no have in ready queue, verify blocked queue
+            if (reference == null) {
+                reference = escalonador.verifyBlockedQueue(readyQueue, tableOfProcess, queueOfBlocked);
+                _verifyBlockedQueue();
+                continue;
             }
 
             // Get the bcp in table of processes
@@ -274,16 +282,22 @@ public class So {
 
             bcpTime = bcp.getTimes();
 
+            processor.useCpu();
+
             // Use processor for quantum time
             while (clock.timeOfProcess(quntumquantum, bcpTime)) {
-                response = _executeProcess(process, bcp, reference);
+                response = _executeProcess(process, bcp);
 
                 blocked = response.equals("E/S");
                 end = response.equals("SAIDA");
 
-                processor.useCpu();
+                // Increment pc
+                processor.incrementPc();
 
                 quntumquantum = quntumquantum + 1;
+
+                countInstructions++;
+                numberOfInstructions++;
 
                 // Over quantum or finish process
                 if (blocked || end) {
@@ -291,44 +305,58 @@ public class So {
                 }
             }
 
+            processor.freeCpu();
+
             // Update number of changes
             changes++;
 
-            processor.freeCpu();
-
             quntumquantum = 0;
+
+            // Logfile
+            lines.add("Interrompendo " + nameOfProcess + " após " + countInstructions + " instruções");
+            countInstructions = 0;
 
             // Over quantum or finish process
             if (blocked || end) {
+                processor.freeCpu();
+                reference = escalonador.getNext(
+                        readyQueue,
+                        queueOfBlocked,
+                        tableOfProcess,
+                        maxPriority,
+                        reference,
+                        response
+                );
+
                 blocked = false;
                 end = false;
 
                 _verifyBlockedQueue();
 
-                reference = escalonador.getNext(readyQueue, queueOfBlocked, tableOfProcess, maxPriority);
                 continue;
             }
 
-            // Move queues
-            escalonador.moveQueues(readyQueue, tableOfProcess, reference);
-
-            // Put ready state and remove executing state, decrease the credits
+            // Put ready state and remove executing state
             dispatcher.updateBcp(bcp, psw[0], processor, "OVERQUANTUM");
 
-            // Over the quantum time
-            // Put in hashmap
-//            try {
-//                groupOfQuantums.put(time, groupOfQuantums.get(time) + numberOfInstructions);
-//            } catch (NullPointerException ex) {
-//                groupOfQuantums.put(time,  numberOfInstructions);
-//            }
+//             Over the quantum time
+//             Put in hashmap
+            try {
+                groupOfQuantums.put(numberOfInstructions, groupOfQuantums.get(numberOfInstructions) + numberOfInstructions);
+            } catch (NullPointerException ex) {
+                groupOfQuantums.put(numberOfInstructions,  numberOfInstructions);
+            }
 
-            // Logfile
-            lines.add("Interrompendo " + nameOfProcess + " após " + (time - 1) + " instruções");
+            reference = escalonador.getNext(
+                    readyQueue,
+                    queueOfBlocked,
+                    tableOfProcess,
+                    maxPriority,
+                    reference,
+                    response
+            );
 
             _verifyBlockedQueue();
-
-            reference = escalonador.getNext(readyQueue, queueOfBlocked, tableOfProcess, maxPriority);
         }
 
         // Write a logFile

@@ -43,13 +43,13 @@ public class Processor {
     }
 
     // Update pc of cpu
-    public void useCpu() {
+    public void incrementPc() {
         this.pc++;
     }
 
     public void freeCpu() {
-        pc = 0;
-        x = 0;
-        y = 0;
+    }
+
+    public void useCpu() {
     }
 }
