@@ -70,7 +70,7 @@ public class Bcp {
     }
 
     public void updateTimes() {
-        quantum++;
+        quantum*=2;
         this.times *= quantum;
     }
 

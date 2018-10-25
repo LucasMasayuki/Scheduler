@@ -1,5 +1,3 @@
-import sun.awt.image.ImageWatched;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.file.Files;
@@ -13,6 +11,7 @@ public class So {
     private static int changes = 0;
     private static int maxPriority = 0;
     private static int numberOfInstructions = 0;
+    private static int numberOfQuantums = 0;
     private static String[] psw = { "PRONTO", "EXECUTANDO", "BLOQUEIADO" };
 
     private static List<LinkedList<Integer>> readyQueue = new ArrayList<>();
@@ -20,7 +19,6 @@ public class So {
     private static QueueOfBlocked queueOfBlocked = new QueueOfBlocked();
     private static TableOfProcess tableOfProcess = new TableOfProcess();
     private static List<String> lines = new ArrayList<>();
-    private static Map<Integer, Integer> groupOfQuantums = new HashMap<Integer, Integer>();
     private static Memory memory = new Memory();
     private static Processor processor = new Processor();
     private static Dispatcher dispatcher = new Dispatcher();
@@ -36,6 +34,7 @@ public class So {
         fileName = "code/src/prioridades.txt";
         List<Integer> priority = txtHelper.readIntegerFiles(fileName);
 
+        // Get the max priority =
         maxPriority = Collections.max(priority);
 
         for (int i = 0; i < maxPriority + 1; i++) {
@@ -78,7 +77,7 @@ public class So {
             // Save process in the memory
             memory.save(readTxt);
 
-            int reference = memory.getReference(readTxt);
+                int reference = memory.getReference(readTxt);
 
             // Read file and transform in process object
             Process process = new Process(reference);
@@ -112,13 +111,11 @@ public class So {
 
     private static void _writeLogFile() {
         // Calculate the stats
-        int averageChanges = _calculateAverage("changes");
-        int averageInstructions = _calculateAverage("instructions");
 
         lines.add("TROCAS: "+ changes);
         lines.add("INSTRUCOES: "+ numberOfInstructions);
-        lines.add("MEDIA DE TROCAS: "+ averageChanges);
-        lines.add("MEDIA DE INSTRUCOES: "+ averageInstructions);
+        lines.add("MEDIA DE TROCAS: "+ _calculateAverage("changes"));
+        lines.add("MEDIA DE INSTRUCOES: "+ _calculateAverage("instructions"));
         lines.add("QUANTUM: "+ quantum);
 
         String logName;
@@ -138,26 +135,12 @@ public class So {
         }
     }
 
-    private static int _calculateAverage(String what) {
+    private static double _calculateAverage(String what) {
         if (what.equals("changes")) {
-            return changes/maxFiles;
+            return changes / (double) maxFiles;
         }
 
-        int numberOfInstructions = 0;
-        int instructions;
-        int time = 0;
-
-        // Makes sum of averages of the number of instructions grouped by quantum
-        for (Map.Entry<Integer, Integer> group : groupOfQuantums.entrySet()) {
-            time = group.getKey();
-            instructions = group.getValue();
-
-            numberOfInstructions += (instructions/time);
-        }
-
-        numberOfInstructions = time/maxFiles;
-
-        return numberOfInstructions;
+        return numberOfInstructions / (double) numberOfQuantums;
     }
 
     // Return true if block
@@ -226,18 +209,19 @@ public class So {
             }
             System.out.println();
         }
+
+        System.out.println();
     }
 
     public static void main(String[] args) {
         LinkedList<Integer> queue;
         Bcp bcp;
         String response = "";
-        String nameOfProcess = "";
+        String nameOfProcess;
         Integer reference = 0;
         boolean blocked = false;
         boolean end = false;
-        int quntumquantum = 0;
-        int bcpTime = 0;
+        int bcpTime;
         int countInstructions = 0;
 
         // Read All txt files and setup process, priority and quantum
@@ -257,8 +241,6 @@ public class So {
         while (!tableOfProcess.empty()) {
             tableOfProcess.showTable();
             _showQueue();
-
-            System.out.println();
 
             // If no have in ready queue, verify blocked queue
             if (reference == null) {
@@ -285,7 +267,7 @@ public class So {
             processor.useCpu();
 
             // Use processor for quantum time
-            while (clock.timeOfProcess(quntumquantum, bcpTime)) {
+            while (clock.timeOfProcess(countInstructions, bcpTime)) {
                 response = _executeProcess(process, bcp);
 
                 blocked = response.equals("E/S");
@@ -294,10 +276,7 @@ public class So {
                 // Increment pc
                 processor.incrementPc();
 
-                quntumquantum = quntumquantum + 1;
-
                 countInstructions++;
-                numberOfInstructions++;
 
                 // Over quantum or finish process
                 if (blocked || end) {
@@ -310,10 +289,14 @@ public class So {
             // Update number of changes
             changes++;
 
-            quntumquantum = 0;
+            // Update number of instructions
+            numberOfInstructions += countInstructions;
+            numberOfQuantums++;
 
             // Logfile
             lines.add("Interrompendo " + nameOfProcess + " após " + countInstructions + " instruções");
+
+            // Reset counter
             countInstructions = 0;
 
             // Over quantum or finish process
@@ -338,14 +321,6 @@ public class So {
 
             // Put ready state and remove executing state
             dispatcher.updateBcp(bcp, psw[0], processor, "OVERQUANTUM");
-
-//             Over the quantum time
-//             Put in hashmap
-            try {
-                groupOfQuantums.put(numberOfInstructions, groupOfQuantums.get(numberOfInstructions) + numberOfInstructions);
-            } catch (NullPointerException ex) {
-                groupOfQuantums.put(numberOfInstructions,  numberOfInstructions);
-            }
 
             reference = escalonador.getNext(
                     readyQueue,

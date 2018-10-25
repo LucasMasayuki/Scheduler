@@ -9,13 +9,6 @@ public class TableOfProcess {
         line++;
     }
 
-//    public void orderByPriority() {
-//        if (table.size() > 0) {
-//            Comparator<Bcp> comparator = new PriorityComparator();
-//            Collections.sort(table, comparator);
-//        }
-//    }
-
     public void removeOfTable(int reference) {
         table.remove(reference);
     }
