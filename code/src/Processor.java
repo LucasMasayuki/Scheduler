@@ -1,4 +1,4 @@
-public class Cpu {
+public class Processor {
     private int pc = 0;
     private int x = 0;
     private int y = 0;
@@ -43,13 +43,13 @@ public class Cpu {
     }
 
     // Update pc of cpu
-    public void useCpu() {
+    public void incrementPc() {
         this.pc++;
     }
 
     public void freeCpu() {
-        pc = 0;
-        x = 0;
-        y = 0;
+    }
+
+    public void useCpu() {
     }
 }

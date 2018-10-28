@@ -1,38 +1,40 @@
 import java.util.LinkedList;
-import java.util.Queue;
 
 public class QueueOfBlocked {
-    private Queue<Bcp> queue = new LinkedList<>();
+    private LinkedList<Integer> queue = new LinkedList<>();
 
-    public Bcp removeOfQueue() {
+    public Integer removeOfQueue() {
         return queue.remove();
     }
 
-    public void addInQueue(Bcp bcp) {
-        queue.add(bcp);
+    public void addInQueue(int index) {
+        queue.addLast(index);
     }
 
     public boolean empty() {
         return queue.isEmpty();
     }
 
-    public Queue<Bcp> getQueue() {
+    public LinkedList<Integer> getQueue() {
         return queue;
     }
 
-    public void showQueue() {
+    public void showQueue(TableOfProcess table) {
         System.out.println("Fila de Bloqueiados");
-        for (Bcp element : queue) {
-            String nameOfProcess = element.getNameOfProcess();
-            System.out.println(nameOfProcess);
+        for (int index : queue) {
+            Bcp bcp = table.getBcp(index);
+            String nameOfProcess = bcp.getNameOfProcess();
+            System.out.println(nameOfProcess
+                    + " || creditos "
+                    + bcp.getCredits()
+                    + " || wait " + bcp.getWaittingTime()
+            + " || currentPc " + bcp.getPc()
+            + " || reference " + index);
         }
+        System.out.println();
     }
 
-    public boolean checkIfFirstOfQueueOverWaittingTime() {
-        Bcp bcp = queue.peek();
-        if (bcp.overWaittingTime()) {
-            return true;
-        }
-        return false;
+    public Integer peek() {
+        return queue.peek();
     }
 }
