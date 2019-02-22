@@ -20,7 +20,7 @@ executando a limpeza final. Representada pela instrucão SAIDA
 
 **Funcionamento do sistema**:
 
-O sistema começa lendo os arquivos txt do diretório processos, pegando o n_com do
+  O sistema inicia lendo os arquivos txt do diretório processos, pegando o n_com do
 arquivo quantum.txt, armazenando em arrayList as prioridades do arquivo prioridades.txt e
 colocando os processos na ordem correta na fila de prontos e posicionando o bcp na tabela
 de processos (na fila de prontos é armazenado a referência ao bcp na tabela de processos,
@@ -28,7 +28,7 @@ representado por um inteiro que é uma chave do HashMap da tabela de processos),
 disso o processo é salvo na memória e o processo guarda a referência(um inteiro) para a
 string na memória.
 
-Assim que os processos finalizam de serem carregados em memória, o So começa
+  Assim que os processos finalizam de serem carregados em memória, o So começa
 a percorrer a fila de prontos, iterando enquanto a tabela de processos não estiver vazia.O
 pega o primeiro da fila de prontos, da fila de créditos apropriada o primeiro elemento da fila,
 através da referência ao bcp, o so pega o bcp na tabela de processos e chama
@@ -48,7 +48,7 @@ na próxima iteração. Caso apenas seu quantum tenha terminado, decrementa seus
 créditos, chama o escalonador, escalonador reposiciona o processo na fila de créditos
 correspondente e dobra o quantum do processo.
 
-Além disso ao chamar o escalonador, automaticamente o escalonador verifica se
+  Além disso ao chamar o escalonador, automaticamente o escalonador verifica se
 nenhum processo na fila de bloqueados pode retornar para a fila de prontos, se sim
 reposiciona na fila de prontos de acordo com seus créditos e remove da fila de bloqueados,
 e o escalonador também verifica se todos os processos das duas filas possuem 0 de crédito
@@ -56,6 +56,6 @@ e o escalonador também verifica se todos os processos das duas filas possuem 0 
 final quando todos os processos na fila de prontos estão com créditos 0 porém na fila de
 bloqueados ainda possui processos com algum crédito, é realizado Round-Robin na fila.
 
-Ao final da rotina de percorrer todas as filas, é calculado as médias relacionadas ao
+  Ao final da rotina de percorrer todas as filas, é calculado as médias relacionadas ao
 número de instruções por quantum e número de trocas por processo, e ao final é gerado o
 logfile com o número correspondente do quantum do arquivo txt.
