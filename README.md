@@ -2,6 +2,7 @@
 Scheduler of process
 
 Máteria: Sistemas Operacionais.
+
 USP EACH - Sitemas de informação - 4°Semestre.
 
 Implementação de um escalonador de tarefas para Time Sharing em uma máquina comum único processador.
